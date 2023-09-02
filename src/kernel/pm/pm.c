@@ -126,17 +126,24 @@ PUBLIC void pm_init(void)
 	enable_interrupts();
 }
 
-PUBLIC int do_get_process_info(pid_t pid, struct process_buf *buf){
-	struct process *p;
-	for (p = FIRST_PROC; p <= LAST_PROC; p++){
-		if(p->pid == pid){
-			buf->id = p->pid;
-			buf->state = p->state;
-			buf->priority = p->priority;
-			buf->utime = p->utime ;
-			buf->ktime = p->ktime;
-			return 0;
-		}
-	}
-	return -1;
-};
+// Implementação da função do_get_process_info com os parâmetros pid e buf
+PUBLIC int do_get_process_info(pid_t pid, struct process_buf *buf) {
+    struct process *p;
+
+    // Percorre uma lista de processos, que parece ser armazenada em algum lugar, iniciando de FIRST_PROC até LAST_PROC
+    for (p = FIRST_PROC-1; p <= LAST_PROC; p++) {
+        // Verifica se o ID do processo atual (p->pid) corresponde ao PID especificado
+        if (pid == p->pid) {
+            // Se corresponder, copia as informações do processo para a estrutura 'buf'
+            buf->id = p->pid;          // Copia o ID do processo
+            buf->state = p->state;    // Copia o estado do processo
+            buf->priority = p->priority;  // Copia a prioridade do processo
+            buf->utime = p->utime;    // Copia o tempo de usuário do processo
+            buf->ktime = p->ktime;    // Copia o tempo de kernel do processo
+            return 0;  // Retorna 0 para indicar que a operação foi concluída com sucesso
+        }
+    }
+
+    // Se o PID não foi encontrado na lista de processos, retorna -1 para indicar um erro
+    return -1;
+}

@@ -230,4 +230,6 @@
 	/* Environment variables. */
 	extern char **environ;
 
+	//extern int get_process_info(pid_t pid, struct process_buf *buf);
+
 #endif /* UNISTD_H_ */

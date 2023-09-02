@@ -20,7 +20,7 @@
 #include <nanvix/syscall.h>
 #include <sys/stat.h>
 #include <errno.h>
-#include <pm.h>
+#include <nanvix/pm.h>
 
 /*
  * Gets file status.
@@ -32,7 +32,7 @@ int get_process_info(pid_t pid, struct process_buf *buf)
 	__asm__ volatile (
 		"int $0x80"
 		: "=a" (ret)
-		: "0" (NR_get_process_info),
+		: "0" (NR_procinfo),
 		  "b" (pid),
 		  "c" (buf)
 	);

@@ -29,6 +29,7 @@
 	#include <signal.h>
 	#include <ustat.h>
 	#include <utime.h>
+	#include <nanvix/pm.h>
 
 	/* Number of system calls. */
 	#define NR_SYSCALLS 52
@@ -85,7 +86,7 @@
  	#define NR_semget   48
  	#define NR_semctl   49
  	#define NR_semop    50
-	#define NR_get_process_info 51
+	#define NR_procinfo 51
 
 #ifndef _ASM_FILE_
 
@@ -107,7 +108,6 @@
 	EXTERN pid_t sys_setpgrp(void);
 	EXTERN int sys_setuid(pid_t uid);
 	EXTERN pid_t sys_wait(int *stat_loc);
-	EXTERN int sys_get_process_info(pid_t pid, struct process_buf *buf);
 
 	/*
 	 * Duplicates a file descriptor.
@@ -265,6 +265,11 @@
 	 * Get system ticks since initialization
 	 */
 	EXTERN int sys_gticks(void);
+
+	/*
+	 * Get system process info
+	 */
+	EXTERN int sys_get_process_info(pid_t pid, struct process_buf *buf);
 
 #endif /* _ASM_FILE_ */
 
