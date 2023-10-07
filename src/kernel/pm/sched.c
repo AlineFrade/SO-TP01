@@ -60,11 +60,38 @@ PUBLIC void resume(struct process *proc)
 }
 
 /**
+ * Calcula e retorna a prioridade real de um processo.
+ *
+ * Esta função calcula a prioridade real de um processo com base em três fatores:
+ * - A prioridade do processo.
+ * - O valor 'nice' do processo.
+ * - A metade do contador do processo.
+ *
+ * @param proc Um ponteiro para a estrutura de processo.
+ * @return A prioridade real calculada.
+ */
+PUBLIC int calculate_real_priority(struct process *proc) {
+    // Multiplica a prioridade por 2 para dar mais peso a ela.
+    int weighted_priority = proc->priority * 2;
+
+    // Multiplica o valor 'nice' por 3 para ajustar a prioridade.
+    int nice_adjustment = proc->nice * 3;
+
+    // Subtrai a metade do contador para ajustar a prioridade.
+    int counter_adjustment = proc->counter / 2;
+
+    // Calcula a prioridade real somando os ajustes e retornando o resultado.
+    int realPriority = weighted_priority + nice_adjustment - counter_adjustment;
+    
+    return realPriority;
+}
+
+/**
  * @brief Yields the processor.
  */
 PUBLIC void yield(void)
 {
-	struct process *p;    /* Working process.     */
+	struct process *p;	  /* Working process.     */
 	struct process *next; /* Next process to run. */
 
 	/* Re-schedule process for execution. */
@@ -98,7 +125,7 @@ PUBLIC void yield(void)
 		 * Process with higher
 		 * waiting time found.
 		 */
-		if (p->counter > next->counter)
+		if (calculate_real_priority(p) > calculate_real_priority(next))
 		{
 			next->counter++;
 			next = p;

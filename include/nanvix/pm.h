@@ -130,6 +130,7 @@ struct process_buf
 	int priority;	
 	unsigned ktime; 
 	unsigned utime; 
+	int nice;
 };
 
 /*Declaração de uma função chamada 'do_get_process_info' com os parâmetros 'pid' e 'buf'*/ 
