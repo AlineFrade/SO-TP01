@@ -23,6 +23,8 @@
 #include <nanvix/hal.h>
 #include <nanvix/pm.h>
 #include <signal.h>
+#include <stdio.h>
+
 
 /**
  * @brief Schedules a process to execution.
@@ -59,31 +61,19 @@ PUBLIC void resume(struct process *proc)
 		sched(proc);
 }
 
-/**
- * Calcula e retorna a prioridade real de um processo.
- *
- * Esta função calcula a prioridade real de um processo com base em três fatores:
- * - A prioridade do processo.
- * - O valor 'nice' do processo.
- * - A metade do contador do processo.
- *
- * @param proc Um ponteiro para a estrutura de processo.
- * @return A prioridade real calculada.
- */
 PUBLIC int calculate_real_priority(struct process *proc) {
-    // Multiplica a prioridade por 2 para dar mais peso a ela.
-    int weighted_priority = proc->priority * 2;
+	// A função `calculate_real_priority` é usada para determinar a prioridade real de um processo.
 
-    // Multiplica o valor 'nice' por 3 para ajustar a prioridade.
-    int nice_adjustment = proc->nice * 3;
+	// Nice e Priority: Se o valor de 'nice' e 'priority' for menor do que o número,
+	// isso aumenta a prioridade do processo, pois estamos subtraindo esses valores.
+	// Quanto menor o valor resultante, maior será a prioridade.
 
-    // Subtrai a metade do contador para ajustar a prioridade.
-    int counter_adjustment = proc->counter / 2;
+	// Contador: Se o valor do contador for maior do que o número,
+	// isso diminui a prioridade do processo, pois estamos subtraindo o valor do contador.
+	// Quanto maior o valor resultante, menor será a prioridade.
 
-    // Calcula a prioridade real somando os ajustes e retornando o resultado.
-    int realPriority = weighted_priority + nice_adjustment - counter_adjustment;
-    
-    return realPriority;
+	// Retornamos o resultado dessa expressão como a prioridade real calculada.
+    return (proc->counter - (proc->nice) - (proc->priority));
 }
 
 /**
@@ -125,9 +115,11 @@ PUBLIC void yield(void)
 		 * Process with higher
 		 * waiting time found.
 		 */
-		if (calculate_real_priority(p) > calculate_real_priority(next))
+		if ((calculate_real_priority(p)) > (calculate_real_priority(next)))
 		{
+			//aumenta o contador do menos prioritário
 			next->counter++;
+			//próximo a rodar
 			next = p;
 		}
 

@@ -1,0 +1,26 @@
+# Desenvolvimento de Prioridades de Processos
+
+Durante o desenvolvimento deste trabalho, enfrentamos o desafio de criar uma função chamada `calculate_real_priority`. Essa função desempenha um papel crucial no gerenciamento de processos e na determinação de suas prioridades dentro do sistema operacional.
+
+A lógica por trás dessa função envolve a avaliação do valor total de cada processo em execução. Realizamos uma série de testes e análises para entender como essa função pode ser implementada de forma eficaz.
+
+## Prioridades Dinâmicas
+
+A função `calculate_real_priority` tem como objetivo ajustar dinamicamente as prioridades dos processos. A ideia principal é que, quanto maior o valor retornado por esta função, maior será a prioridade atribuída a esse processo pelo sistema operacional. Esta implementação é fundamental para evitar que os processos fiquem presos em estados de espera prolongados, o que poderia prejudicar o desempenho do sistema.
+
+## Evitando Problemas de Espera
+
+Ao atribuir prioridades de forma dinâmica com base em métricas específicas, como o valor total do processo, podemos evitar que os processos sejam negligenciados pelo sistema operacional. Isso significa que mesmo os processos que não são explicitamente definidos como "prioritários" ainda recebem a devida atenção e tempo de CPU.
+
+Aqui está a tabela com os valores antes e depois da alteração:
+
+|                   | Antes da Alteração | Depois da Alteração |
+|-------------------|---------------------|----------------------|
+| Individual time   | 0                   | 0                    |
+| Execution time    | 0                   | 0                    |
+| Individual time   | 1100                | 1500                 |
+| Execution time    | 1100                | 1500                 |
+| Individual time   | 100                 | 1600                 |
+| Execution time    | 1200                | 1600                 |
+
+Essa tabela demonstra as mudanças nos tempos individuais e de execução antes e depois da implementação da função `calculate_real_priority`. Essas mudanças refletem o impacto positivo da abordagem de prioridades dinâmicas no gerenciamento de processos.

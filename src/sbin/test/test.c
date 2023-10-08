@@ -29,6 +29,9 @@
 #include <unistd.h>
 #include <string.h>
 
+#include <nanvix/pm.h>
+#define MAX 100
+
 /* Test flags. */
 #define EXTENDED (1 << 0)
 #define FULL     (1 << 1)
@@ -226,9 +229,14 @@ static void work_io(void)
  *
  * @return Zero if passed on test, and non-zero otherwise.
  */
-static int sched_test0(void)
+static int sched_test0(clock_t *total_time, clock_t *individual_time)
 {
 	pid_t pid;
+
+	clock_t t0, t1;
+	struct tms timing;
+
+	t0 = times(&timing);
 
 	pid = fork();
 
@@ -245,6 +253,11 @@ static int sched_test0(void)
 
 	wait(NULL);
 
+	t1 = times(&timing);
+
+	*individual_time = (t1-t0);
+	*total_time += *individual_time;
+
 	return (0);
 }
 
@@ -256,9 +269,14 @@ static int sched_test0(void)
  *
  * @returns Zero if passed on test, and non-zero otherwise.
  */
-static int sched_test1(void)
+static int sched_test1(clock_t *total_time, clock_t *individual_time)
 {
 	pid_t pid;
+
+	clock_t t0, t1;
+	struct tms timing;
+
+	t0 = times(&timing);
 
 	pid = fork();
 
@@ -283,19 +301,29 @@ static int sched_test1(void)
 
 	wait(NULL);
 
+	t1 = times(&timing);
+
+	*individual_time = (t1-t0);
+	*total_time += *individual_time;
+
 	return (0);
 }
 
 /**
- * @brief Scheduling test 1.
+ * @brief Scheduling test 2.
  *
  * @details Spawns several processes and stresses the scheduler.
  *
  * @returns Zero if passed on test, and non-zero otherwise.
  */
-static int sched_test2(void)
+static int sched_test2(clock_t *total_time, clock_t *individual_time)
 {
 	pid_t pid[4];
+
+	clock_t t0, t1;
+	struct tms timing;
+
+	t0 = times(&timing);
 
 	for (int i = 0; i < 4; i++)
 	{
@@ -336,6 +364,11 @@ static int sched_test2(void)
 		}
 	}
 
+	t1 = times(&timing);
+
+	*individual_time = (t1-t0);
+	*total_time += *individual_time;
+
 	return (0);
 }
 
@@ -346,10 +379,15 @@ static int sched_test2(void)
  *
  * @returns Zero if passed on test, and non-zero otherwise.
  */
-static int sched_test3(void)
+static int sched_test3(clock_t *total_time, clock_t *individual_time)
 {
 	pid_t child;
 	pid_t father;
+
+	clock_t t0, t1, tmp;
+	struct tms timing;
+
+	t0 = times(&timing);
 
 	father = getpid();
 
@@ -365,6 +403,12 @@ static int sched_test3(void)
 	/* Die. */
 	if (getpid() != father)
 		_exit(EXIT_SUCCESS);
+
+	t1 = times(&timing);
+
+	tmp = (t1-t0);
+	*individual_time += tmp;
+	*total_time += tmp;
 
 	return (0);
 }
@@ -639,13 +683,21 @@ int main(int argc, char **argv)
 		/* Scheduling test. */
 		else if (!strcmp(argv[i], "sched"))
 		{
+			clock_t total_time;
+			clock_t individual_time;
 			printf("Scheduling Tests\n");
 			printf("  waiting for child  [%s]\n",
-				(!sched_test0()) ? "PASSED" : "FAILED");
+				(!sched_test0(&total_time, &individual_time)) ? "PASSED" : "FAILED");
+				printf("Individual time: %d \n", individual_time);
+				printf("Total execution time: %d \n", total_time);
 			printf("  dynamic priorities [%s]\n",
-				(!sched_test1()) ? "PASSED" : "FAILED");
+				(!sched_test1(&total_time, &individual_time)) ? "PASSED" : "FAILED");
+				printf("Individual time: %d \n", individual_time);
+				printf("Total execution time: %d \n", total_time);
 			printf("  scheduler stress   [%s]\n",
-				(!sched_test2() && !sched_test3()) ? "PASSED" : "FAILED");
+				(!sched_test2(&total_time, &individual_time) && !sched_test3(&total_time, &individual_time)) ? "PASSED" : "FAILED");
+				printf("Individual time: %d \n", individual_time);
+				printf("Total execution time: %d \n", total_time);
 		}
 
 		/* IPC test. */
