@@ -19,6 +19,7 @@
 
 #ifndef SEM_H_
 #define SEM_H_
+#define <nanvix/const.h>
 
 	/**
 	 * @brief Comand values for semaphores.
@@ -27,11 +28,22 @@
 	#define GETVAL   0 /**< Returns the value of a semaphore. */
 	#define SETVAL   1 /**< Sets the value of a semaphore.    */
 	#define IPC_RMID 3 /**< Destroys a semaphore.            */
+	#define SEM_MAX 5
+	#define SEM_FIRST((&semtab[0]))
+	#define SEM_LAST((&semtab[SEM_MAX - 1]))
 	/**@}*/
 
 	/* Forward definitions. */
 	extern int semget(unsigned);
 	extern int semctl(int, int, int);
 	extern int semop(int, int);
+
+	struct semaphore{
+		int id; 
+		unsigned value;
+		unsigned current_value;
+	};
+
+	extern struct semaphore semtab[SEM_MAX];
 
 #endif /* SEM_H_ */

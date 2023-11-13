@@ -77,4 +77,7 @@ PUBLIC void (*syscalls_table[NR_SYSCALLS])(void)  = {
     NULL,
     NULL,
 	(void(*)(void))&sys_get_process_info,
+	(void (*)(void))&sys_semget,
+    (void (*)(void))&sys_semctl,
+    (void (*)(void))&sys_semop,
 };
