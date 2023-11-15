@@ -1,0 +1,35 @@
+# Default rules.
+*.o
+*.a
+*.pdf
+bochsout.txt
+bin/*
+bin/sbin/*
+bin/ubin/*
+doc/*-kernel
+*.bbl
+*.aux
+*.swp
+*.bcf
+*.blg
+*.fls
+*.log
+*.xml
+*.gz
+*.fdb_latexmk
+*.out
+*.dvi
+*.ini
+
+# Toolchain
+toolchain
+
+# ISO Images
+*.img
+*.iso
+nanvix-iso/*
+tools/run/bochsrc.txt
+
+# Exceptions.
+!doc/paper/img/*.pdf
+!doc/paper/*.pdf

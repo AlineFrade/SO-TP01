@@ -20,6 +20,7 @@
 
 #include <assert.h>
 #include <nanvix/config.h>
+#include <nanvix/pm.h>
 #include <sys/times.h>
 #include <sys/wait.h>
 #include <sys/sem.h>
@@ -29,7 +30,6 @@
 #include <unistd.h>
 #include <string.h>
 
-#include <nanvix/pm.h>
 #define MAX 100
 
 /* Test flags. */
@@ -538,6 +538,102 @@ int semaphore_test3(void)
 	unlink("buffer");
 
 	return (0);
+}
+
+// Gera dados aleatórios para inserção no buffer
+void produce_data(int *item) {
+    static int initialized = 0;
+    
+    if (!initialized) {
+        srand((unsigned int)getpid());
+        initialized = 1;
+    }
+    
+    *item = rand() % 100;
+}
+
+// Escreve um item no buffer
+void write_data(int item, int buffer_fd) {
+    PUT_ITEM(buffer_fd, item); 
+}
+
+// Lê um item do buffer
+void read_data(int *item, int buffer_fd) {
+    GET_ITEM(buffer_fd, item); 
+}
+
+// Função do leitor
+void reader(int sem_mutex, int sem_bd, int buffer_fd) {
+	int leitores = 0;
+    SEM_DOWN(sem_mutex); // Adquire o semáforo de exclusão mútua
+    leitores++; // Incrementa o número de leitores
+    if (leitores == 1) {
+        SEM_DOWN(sem_bd); // Se for o primeiro leitor, bloqueia escrita no buffer
+    }
+    SEM_UP(sem_mutex); // Libera o semáforo de exclusão mútua
+
+    int item;
+    read_data(&item, buffer_fd); // Lê um item do buffer
+
+    SEM_DOWN(sem_mutex); // Adquire o semáforo de exclusão mútua
+    leitores--; // Decrementa o número de leitores
+    if (leitores == 0) {
+        SEM_UP(sem_bd); // Se não houver mais leitores, libera escrita no buffer
+    }
+    SEM_UP(sem_mutex); // Libera o semáforo de exclusão mútua
+}
+
+// Função do escritor
+void writer(int sem_bd, int buffer_fd) {
+    int item;
+    produce_data(&item); // Gera um novo item para escrever no buffer
+
+    SEM_DOWN(sem_bd); // Bloqueia acesso ao buffer para escrita
+    write_data(item, buffer_fd); // Escreve o item no buffer
+    SEM_UP(sem_bd); // Libera o acesso ao buffer para escrita
+}
+
+/**
+ * @brief Teste de semáforos para o Problema dos Leitores e Escritores.
+ *
+ * @returns Zero se o teste passar e diferente de zero caso contrário.
+ */
+int semaphore_test4() {
+    pid_t pid;                  /* Identificador do Processo. */
+    int buffer_fd;              /* Descritor do arquivo do buffer. */
+    int sem_bd;                 /* Semáforo para controle do buffer. */
+    int sem_mutex;              /* Semáforo para exclusão mútua. */
+
+    /* Criação dos semáforos. */
+    SEM_CREATE(sem_mutex, 1);
+    SEM_CREATE(sem_bd, 2);
+
+    /* Inicialização dos semáforos. */
+    SEM_INIT(sem_bd, 1);
+    SEM_INIT(sem_mutex, 1);
+
+    buffer_fd = open("buffer", O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+    if (buffer_fd < 0)
+        return -1;
+
+    if ((pid = fork()) < 0) {
+        return -1;
+    } else if (pid == 0) {
+        reader(sem_mutex, sem_bd, buffer_fd);
+        _exit(EXIT_SUCCESS);
+    } else {
+        writer(sem_bd, buffer_fd);
+        wait(NULL);
+    }
+
+    /* Destruição dos semáforos. */
+    SEM_DESTROY(sem_mutex);
+    SEM_DESTROY(sem_bd);
+
+    close(buffer_fd);
+    unlink("buffer");
+
+    return 0;
 }
 
 /*============================================================================*

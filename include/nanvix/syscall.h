@@ -30,6 +30,7 @@
 	#include <ustat.h>
 	#include <utime.h>
 	#include <nanvix/pm.h>
+	#include <sys/sem.h>
 
 	/* Number of system calls. */
 	#define NR_SYSCALLS 52
@@ -270,6 +271,13 @@
 	 * Get system process info
 	 */
 	EXTERN int sys_get_process_info(pid_t pid, struct process_buf *buf);
+
+	EXTERN PUBLIC int sys_semget(int key);
+
+	EXTERN PUBLIC void sys_semctl(int semid, int cmd, int value);
+
+	EXTERN PUBLIC void sys_semop(int semid, int op);
+
 
 #endif /* _ASM_FILE_ */
 
