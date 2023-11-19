@@ -1,36 +1,44 @@
 #include <sys/sem.h>
 
-PUBLIC struct sem tabsem[SEM_MAX]; // Tabela de semáforos
+PUBLIC struct sem tabsem[SEM_MAX];
 
-/**
- * @brief Inicializa a tabela de semáforos.
- */
-void sem_init() {
+void sem_init()
+{
+    // Initializes the semaphore table.
     for (int i = 0; i < SEM_MAX; i++) {
-        tabsem[i].state = INACTIVE; // Define o estado como inativo
-        tabsem[i].procusing = 0; // Inicializa a contagem de processos usando o semáforo
-        tabsem[i].id = i; // Define o ID do semáforo
-        tabsem[i].pos = i; // Define a posição do semáforo na tabela
+        tabsem[i].state = INACTIVE; // Sets the semaphore state to inactive.
+        tabsem[i].procusing = 0;    // Initializes the count of processes using the semaphore to zero.
+        tabsem[i].pos = i;          // Sets the position of the semaphore in the table.
+        tabsem[i].id = i;           // Sets the identifier of the semaphore.
     }
+    // Calculates the number of semaphore tables needed and initializes them in the current process.
+    int table_num = SEM_MAX / 16;
+    for (int i = 0; i < table_num; i++)
+        curr_proc->shared_sem[i] = 0;
 }
 
 /**
- * @brief Verifica se o processo está associado ao semáforo.
- * @param sem Ponteiro para a estrutura de semáforo.
- * @return 0 se o processo está associado, -1 se não está associado.
+ *  @brief Checks if the process is associated with
+ *  the semaphore.
+ *
+ *  @param sem The semaphore to be checked.
+ *  @return 0 if the process is associated with the semaphore, -1 otherwise.
  */
-int check_valid(struct sem *sem) {
-    int table = sem->pos / 16; // Determina a tabela em que o semáforo está
-    int pos_table = sem->pos % 16; // Determina a posição do semáforo na tabela
+int valid(struct sem *sem)
+{
+    int table = sem->pos / 16;  // Calculates the table index for the semaphore.
+    int pos_table = sem->pos % 16; // Calculates the position within the table.
     int comp = 1;
     
-    comp = comp << pos_table; // Posiciona o valor 1 no bit correspondente
+    comp = comp << pos_table; // Shifts the bit corresponding to the semaphore position.
 
-    int b = curr_proc->shared_sem[table]; // Obtém a tabela em que o semáforo está associado
+    int *b = &curr_proc->shared_sem[table]; // Points to the shared semaphore table in the current process.
     
-    int result = b & comp; // Realiza a operação AND bit a bit
-    if (result == 0)
-        return -1; // O processo não está associado ao semáforo
+    comp = *b & comp; // Performs a bitwise AND operation.
 
-    return 0; // O processo está associado ao semáforo
+    if (comp == 0) {
+        return -1; // Indicates that the process is not associated with the semaphore.
+    }
+
+    return 0; // Indicates that the process is associated with the semaphore.
 }
