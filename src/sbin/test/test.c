@@ -499,7 +499,7 @@ int semaphore_test3(void)
 	else if (pid == 0)
 	{
 		for (int item = 0; item < NR_ITEMS; item++)
-		{
+		{   
 			SEM_DOWN(empty);
 			SEM_DOWN(mutex);
 
@@ -540,98 +540,107 @@ int semaphore_test3(void)
 	return (0);
 }
 
-// Gera dados aleatórios para inserção no buffer
-void produce_data(int *item) {
-    static int initialized = 0;
-    
-    if (!initialized) {
-        srand((unsigned int)getpid());
-        initialized = 1;
-    }
-    
-    *item = rand() % 100;
+#define READ_ITEM(a, b)                               \
+{                                                    \
+	assert(lseek((a), 0, SEEK_SET) != -1);           \
+	assert(read((a), &(b), sizeof(b)) == sizeof(b)); \
 }
 
-// Escreve um item no buffer
-void write_data(int item, int buffer_fd) {
-    PUT_ITEM(buffer_fd, item); 
-}
-
-// Lê um item do buffer
-void read_data(int *item, int buffer_fd) {
-    GET_ITEM(buffer_fd, item); 
-}
-
-// Função do leitor
-void reader(int sem_mutex, int sem_bd, int buffer_fd) {
-	int leitores = 0;
-    SEM_DOWN(sem_mutex); // Adquire o semáforo de exclusão mútua
-    leitores++; // Incrementa o número de leitores
-    if (leitores == 1) {
-        SEM_DOWN(sem_bd); // Se for o primeiro leitor, bloqueia escrita no buffer
-    }
-    SEM_UP(sem_mutex); // Libera o semáforo de exclusão mútua
-
-    int item;
-    read_data(&item, buffer_fd); // Lê um item do buffer
-
-    SEM_DOWN(sem_mutex); // Adquire o semáforo de exclusão mútua
-    leitores--; // Decrementa o número de leitores
-    if (leitores == 0) {
-        SEM_UP(sem_bd); // Se não houver mais leitores, libera escrita no buffer
-    }
-    SEM_UP(sem_mutex); // Libera o semáforo de exclusão mútua
-}
-
-// Função do escritor
-void writer(int sem_bd, int buffer_fd) {
-    int item;
-    produce_data(&item); // Gera um novo item para escrever no buffer
-
-    SEM_DOWN(sem_bd); // Bloqueia acesso ao buffer para escrita
-    write_data(item, buffer_fd); // Escreve o item no buffer
-    SEM_UP(sem_bd); // Libera o acesso ao buffer para escrita
+#define CHANGE_ITEM(a, b)                               \
+{                                                    \
+	assert(lseek((a), 0, SEEK_SET) != -1);           \
+	assert(write((a), &(b), sizeof(b)) == sizeof(b)); \
 }
 
 /**
- * @brief Teste de semáforos para o Problema dos Leitores e Escritores.
+ * @brief Writers-Readers problem with semaphores.
  *
- * @returns Zero se o teste passar e diferente de zero caso contrário.
+ * @details Reproduces Writers-readers scenario using semaphores.
+ *
+ * @returns Zero if passed on test, and non-zero otherwise.
  */
-int semaphore_test4() {
-    pid_t pid;                  /* Identificador do Processo. */
-    int buffer_fd;              /* Descritor do arquivo do buffer. */
-    int sem_bd;                 /* Semáforo para controle do buffer. */
-    int sem_mutex;              /* Semáforo para exclusão mútua. */
 
-    /* Criação dos semáforos. */
-    SEM_CREATE(sem_mutex, 1);
-    SEM_CREATE(sem_bd, 2);
+int semaphore_test2(void)
+{
+    int pid;
+    int buffer_fd;              /* Buffer file descriptor.    */
+	int writer;                 /* Semáforo escritores.       */
+    int mutex;                  /* Mutex.                     */
+	int buff_readers = 0;       /* Number of readers in buff. */
+	const int NR_ITEMS = 512;   /* Number of items to send.   */
+    
+    /* Criar buffer.*/
+	buffer_fd = open("buffer", O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+	if (buffer_fd < 0)
+		return (-1);
 
-    /* Inicialização dos semáforos. */
-    SEM_INIT(sem_bd, 1);
-    SEM_INIT(sem_mutex, 1);
+    /* Criar semáforos. */
+	SEM_CREATE(writer, 1);
+	SEM_CREATE(mutex, 2);
 
-    buffer_fd = open("buffer", O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
-    if (buffer_fd < 0)
-        return -1;
+    SEM_INIT(writer, 1);
+    SEM_INIT(mutex, 1);
 
-    if ((pid = fork()) < 0) {
-        return -1;
-    } else if (pid == 0) {
-        reader(sem_mutex, sem_bd, buffer_fd);
-        _exit(EXIT_SUCCESS);
-    } else {
-        writer(sem_bd, buffer_fd);
-        wait(NULL);
+    if ((pid = fork()) < 0)
+		return (-1);
+
+	/* Leitor */
+    else if (pid == 0) {
+
+        fork();
+        fork();
+
+        while (0) {
+            
+		    int pos = 2;
+
+            /* Entra na Região Crítica */
+            SEM_DOWN(mutex);
+            buff_readers++; 
+
+            if (buff_readers == 1) {
+                /* Colocar o escritor em sleep */
+                SEM_DOWN(writer);
+            }
+            SEM_UP(mutex);
+            /* Sair */
+
+            /* Lê posição */
+            READ_ITEM(buffer_fd, pos);
+            
+            /* Entra na Região Crítica */
+            SEM_DOWN(mutex);
+            buff_readers--; 
+
+            /* Acorda o escritor se não houver mais leitores no buffer */
+            if (buff_readers == 0) {
+                SEM_UP(writer);
+            }
+            SEM_UP(mutex);
+        }
     }
 
-    /* Destruição dos semáforos. */
-    SEM_DESTROY(sem_mutex);
-    SEM_DESTROY(sem_bd);
+	/* Writer */
+	else
+	{
+		int item = 2;
+        int i = 0;
+		do
+		{
+			SEM_DOWN(writer);
+
+			CHANGE_ITEM(buffer_fd, item);
+
+			SEM_UP(writer);
+
+            i++;
+
+		} while (i < NR_ITEMS);
+	}
+    
 
     close(buffer_fd);
-    unlink("buffer");
+	unlink("buffer");
 
     return 0;
 }

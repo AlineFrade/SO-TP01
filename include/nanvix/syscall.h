@@ -272,12 +272,20 @@
 	 */
 	EXTERN int sys_get_process_info(pid_t pid, struct process_buf *buf);
 
-	EXTERN PUBLIC int sys_semget(int key);
+	/*
+     * Permite que o processo use o semáfaro associado a key.
+     */
+    EXTERN int sys_semget(unsigned key);
 
-	EXTERN PUBLIC void sys_semctl(int semid, int cmd, int value);
-
-	EXTERN PUBLIC void sys_semop(int semid, int op);
-
+    /*
+     * Permite operações de controle no semáfaro.
+     */
+    EXTERN int sys_semctl(int semid, int cmd, int val);
+   
+    /*
+     * Permite operações de incremento/decremento no semáfaro.
+     */
+    EXTERN int sys_semop(int semid, int semop);
 
 #endif /* _ASM_FILE_ */
 
