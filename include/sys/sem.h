@@ -41,24 +41,20 @@
 	extern int semctl(int, int, int);
 	extern int semop(int, int);
 
-    #define sem_t unsigned 
-
     // Estrutura do semáfaro 
     struct sem{
             int id;                 /* Id semaphore*/
-            int pos;                 /* Position semaphore */
-            sem_t key;              /* Key of semaphore */
+            unsigned key;           /* Key of semaphore */
             int value;              /* Value semaphore. */
             int state;              /* State semaphore. */
-            int procpriority;       /* Priority */
-            int procusing;
+            int procaccess[PROC_MAX];
     };
 
     // Declaração da matriz de semáforos.
     EXTERN struct sem tabsem[SEM_MAX];  
 
     // Declaração da função responsável pela inicialização dos semáforos.
-    EXTERN void init_sem();
+    EXTERN void sem_init();
 
     // Declaração da função para verificar a validade do semáforo.
     EXTERN int valid (struct sem *);

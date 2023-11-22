@@ -530,7 +530,7 @@ int semaphore_test3(void)
 		} while (item != (NR_ITEMS - 1));
 	}
 	printf("7");
-	/* Destroy semaphores. */
+	
 	SEM_DESTROY(mutex);
 	SEM_DESTROY(empty);
 	SEM_DESTROY(full);
@@ -591,34 +591,31 @@ int semaphore_test2(void)
         fork();
         fork();
 
-        while (0) {
+        for (int i = 0; i < NR_ITEMS; i++) {
             
 		    int pos = 2;
 
-            /* Entra na Região Crítica */
+            /*Região Crítica*/
             SEM_DOWN(mutex);
             buff_readers++; 
 
             if (buff_readers == 1) {
-                /* Colocar o escritor em sleep */
                 SEM_DOWN(writer);
             }
             SEM_UP(mutex);
-            /* Sair */
-
-            /* Lê posição */
             READ_ITEM(buffer_fd, pos);
             
-            /* Entra na Região Crítica */
+            /*Região Crítica*/
             SEM_DOWN(mutex);
             buff_readers--; 
 
-            /* Acorda o escritor se não houver mais leitores no buffer */
+            /* Verifica se pode acordar o escritor */
             if (buff_readers == 0) {
                 SEM_UP(writer);
             }
             SEM_UP(mutex);
         }
+		_exit(EXIT_SUCCESS);
     }
 
 	/* Writer */
@@ -640,10 +637,15 @@ int semaphore_test2(void)
 	}
     
 
-    close(buffer_fd);
-	unlink("buffer");
+	 wait(NULL);
+	
+	SEM_DESTROY(mutex);
+	SEM_DESTROY(writer);
 
-    return 0;
+    close(buffer_fd);
+		unlink("buffer");
+
+    return (0);
 }
 
 /*============================================================================*
@@ -812,6 +814,9 @@ int main(int argc, char **argv)
 			printf("Interprocess Communication Tests\n");
 			printf("  producer consumer [%s]\n",
 				(!semaphore_test3()) ? "PASSED" : "FAILED");
+
+			/*printf("  writer reader [%s]\n",
+				(!semaphore_test2()) ? "PASSED" : "FAILED");*/
 		}
 
 		/* FPU test. */
