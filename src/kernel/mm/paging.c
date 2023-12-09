@@ -26,6 +26,7 @@
 #include <nanvix/klib.h>
 #include <nanvix/mm.h>
 #include <nanvix/region.h>
+#include <nanvix/pm.h>
 #include <signal.h>
 #include "mm.h"
 
@@ -272,6 +273,8 @@ PUBLIC void putkpg(void *kpg)
 /* Number of page frames. */
 #define NR_FRAMES (UMEM_SIZE/PAGE_SIZE)
 
+int age_time = 0;
+
 /**
  * @brief Page frames.
  */
@@ -291,46 +294,70 @@ PRIVATE struct
  */
 PRIVATE int allocf(void)
 {
-	int i;      /* Loop index.  */
-	int oldest; /* Oldest page. */
+	int j;        /* Loop index.  */
+    int replaced; /* Replaced page. */
+	struct process *proc; /*Process information*/
+	struct pte *pg; /* Working page table entry. */
 
-	#define OLDEST(x, y) (frames[x].age < frames[y].age)
+	if (age_time == 10){
+		for (proc = FIRST_PROC; proc <= LAST_PROC; proc++){
+			for (j = 0; j < NR_FRAMES; j++){
 
-	/* Search for a free frame. */
-	oldest = -1;
-	for (i = 0; i < NR_FRAMES; i++)
-	{
-		/* Found it. */
-		if (frames[i].count == 0)
-			goto found;
+				if (proc->pid == frames[j].owner){
+					pg = getpte(proc, frames[j].addr);
+					pg->accessed = 0;
+				}
 
-		/* Local page replacement policy. */
-		if (frames[i].owner == curr_proc->pid)
-		{
-			/* Skip shared pages. */
-			if (frames[i].count > 1)
-				continue;
-
-			/* Oldest page found. */
-			if ((oldest < 0) || (OLDEST(i, oldest)))
-				oldest = i;
+			}
 		}
-	}
+		age_time = 0;
+
+	} else age_time++;
+	
+    /* Search for a free frame. */
+    replaced = -1;
+
+    for (j = 0; j < NR_FRAMES; j++){
+        /* Found it. Frame empty.*/
+        if (frames[j].count == 0)
+            goto found;
+            
+        /* Local page replacement policy. */
+        if (frames[j].owner == curr_proc->pid){
+            /* Skip shared pages. */
+            if (frames[j].count > 1)
+                continue;
+
+            //Finding page table
+            pg = getpte(curr_proc, frames[j].addr);
+
+            //Priority to be replaced.
+            if(pg->dirty == 0 && pg->accessed == 0){
+                replaced = j;
+            }else if(pg->dirty == 0 && pg->accessed == 1){
+                replaced = j;
+            }else if(pg->dirty == 1 && pg->accessed == 0){
+                replaced = j;
+            }else if(pg->dirty == 1 && pg->accessed == 1){
+                replaced = j;
+            }
+        }
+    }
 
 	/* No frame left. */
-	if (oldest < 0)
+	if (replaced < 0)
 		return (-1);
 
 	/* Swap page out. */
-	if (swap_out(curr_proc, frames[i = oldest].addr))
+	if (swap_out(curr_proc, frames[j = replaced].addr))  
 		return (-1);
 
 found:
 
-	frames[i].age = ticks;
-	frames[i].count = 1;
-
-	return (i);
+	frames[j].age = ticks;
+	frames[j].count = 1;
+	age_time++;
+	return (j);
 }
 
 /**
