@@ -272,7 +272,6 @@ PUBLIC void putkpg(void *kpg)
 
 /* Number of page frames. */
 #define NR_FRAMES (UMEM_SIZE/PAGE_SIZE)
-
 int age_time = 0;
 
 /**
@@ -282,7 +281,7 @@ PRIVATE struct
 {
 	unsigned count; /**< Reference count.     */
 	unsigned age;   /**< Age.                 */
-	pid_t owner;    /**< Page owner.          */
+	pid_t prop;    /**< Page owner.          */
 	addr_t addr;    /**< Address of the page. */
 } frames[NR_FRAMES] = {{0, 0, 0, 0},  };
 
@@ -294,70 +293,83 @@ PRIVATE struct
  */
 PRIVATE int allocf(void)
 {
-	int j;        /* Loop index.  */
-    int replaced; /* Replaced page. */
-	struct process *proc; /*Process information*/
-	struct pte *pg; /* Working page table entry. */
+    int j;
+    int i = 0;
+    int change;
+    struct process *proc;
+    struct pte *pg;
 
-	if (age_time == 10){
-		for (proc = FIRST_PROC; proc <= LAST_PROC; proc++){
-			for (j = 0; j < NR_FRAMES; j++){
+    if (age_time == 10)
+    {
+        for (proc = FIRST_PROC; proc <= LAST_PROC; proc++)
+        {
+            for (j = 0; j < NR_FRAMES; j++)
+            {
+                if (proc->pid == frames[j].prop)
+                {
+                    pg = getpte(proc, frames[j].addr);
+                    pg->accessed = 0;
+                    frames[j].age++;
+                }
+            }
+        }
+        age_time = 0;
+    }
+    else
+        age_time++;
 
-				if (proc->pid == frames[j].owner){
-					pg = getpte(proc, frames[j].addr);
-					pg->accessed = 0;
-				}
-
-			}
-		}
-		age_time = 0;
-
-	} else age_time++;
-	
     /* Search for a free frame. */
-    replaced = -1;
+    change = -1;
 
-    for (j = 0; j < NR_FRAMES; j++){
+    for (j = 0; j < NR_FRAMES; j++)
+    {
         /* Found it. Frame empty.*/
         if (frames[j].count == 0)
             goto found;
-            
+
         /* Local page replacement policy. */
-        if (frames[j].owner == curr_proc->pid){
+        if (frames[j].prop == curr_proc->pid)
+        {
             /* Skip shared pages. */
             if (frames[j].count > 1)
                 continue;
 
-            //Finding page table
+            // Finding page table
             pg = getpte(curr_proc, frames[j].addr);
 
-            //Priority to be replaced.
-            if(pg->dirty == 0 && pg->accessed == 0){
-                replaced = j;
-            }else if(pg->dirty == 0 && pg->accessed == 1){
-                replaced = j;
-            }else if(pg->dirty == 1 && pg->accessed == 0){
-                replaced = j;
-            }else if(pg->dirty == 1 && pg->accessed == 1){
-                replaced = j;
+            // Priority to be change.
+            if (pg->dirty == 0 && pg->accessed == 0)
+            {
+                change = i;
+            }
+            else if (pg->dirty == 0 && pg->accessed == 1)
+            {
+                change = i;
+            }
+            else if (pg->dirty == 1 && pg->accessed == 0)
+            {
+                change = i;
+            }
+            else if (pg->dirty == 1 && pg->accessed == 1)
+            {
+                change = i;
             }
         }
     }
 
-	/* No frame left. */
-	if (replaced < 0)
-		return (-1);
+    /* No frame left. */
+    if (change < 0)
+        return (-1);
 
-	/* Swap page out. */
-	if (swap_out(curr_proc, frames[j = replaced].addr))  
-		return (-1);
+    /* Swap page out. */
+    if (swap_out(curr_proc, frames[i = change].addr))
+        return (-1);
 
 found:
-
-	frames[j].age = ticks;
-	frames[j].count = 1;
-	age_time++;
-	return (j);
+    age_time++;
+	frames[i].count = 1;
+	frames[i].age = 0;
+    return (i);
 }
 
 /**
@@ -408,7 +420,7 @@ PRIVATE int allocupg(addr_t addr, int writable)
 		return (-1);
 
 	/* Initialize page frame. */
-	frames[i].owner = curr_proc->pid;
+	frames[i].prop = curr_proc->pid;
 	frames[i].addr = addr & PAGE_MASK;
 
 	/* Allocate page. */
@@ -547,7 +559,7 @@ PUBLIC void freeupg(struct pte *pg)
 
 	/* Free user page. */
 	if (--frames[i].count)
-		frames[i].owner = 0;
+		frames[i].prop = 0;
 	kmemset(pg, 0, sizeof(struct pte));
 	tlb_flush();
 }
